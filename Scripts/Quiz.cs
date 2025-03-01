@@ -6,56 +6,116 @@ using TMPro; //namespace para TMPro
 
 public class Quiz : MonoBehaviour
 {
+    [Header("Questions")] //header adiciona um cabeçalho para organizar o inspector.
     [SerializeField] TextMeshProUGUI questionText; //para UI
-    [SerializeField] QuestionSO question;
+    [SerializeField] List<QuestionSO> questions = new List<QuestionSO>();
+    QuestionSO currentQuestion;
+
+    [Header("Answers")]
     [SerializeField] GameObject[] answerButtons;
-    [SerializeField] int correctAnswerIndex;
+    int correctAnswerIndex;
+    bool hasAnsweredEarly; 
+
+    [Header("Button Colors")]
     [SerializeField] Sprite defaultAnswerSprite;
     [SerializeField] Sprite correctAnswerSprite;
+    
+    [Header("Timer")]
+    [SerializeField] Image timerImage;
+    Timer timer;
 
+    [Header("Accuracy")]
+    [SerializeField] TextMeshProUGUI accuracyText;
+   
+     AccuracyKeeper accuracyKeeper;
+    
     void Start()
     {
-        DisplayQuestion();
+        timer = FindAnyObjectByType<Timer>();
+        accuracyKeeper = FindAnyObjectByType<AccuracyKeeper>();
+    }
+
+    void Update()
+    {
+        timerImage.fillAmount = timer.fillFraction;
+        if(timer.loadNextQuestion)
+        {
+            hasAnsweredEarly = false;
+            GetNextQuestion();
+            timer.loadNextQuestion = false;
+        }
+        else if(!hasAnsweredEarly && !timer.isAnsweringQuestion)
+        {
+            DisplayAnswer(-1);
+            SetButtonState(false);
+        }
     }
 
     public void OnAnswerSelected(int index)
     {
+        hasAnsweredEarly = true;
+        DisplayAnswer(index);
+        SetButtonState(false);
+        timer.CancelTimer();
+        accuracyText.text = "Precisão: " + accuracyKeeper.CalculateAccuracy() + "%";
+    }
 
-        Image buttonImage;
+    void DisplayAnswer(int index)
+    {
+                Image buttonImage;
 
-        if(index == question.GetCorrectAnswerIndex())
+        if(index == currentQuestion.GetCorrectAnswerIndex())
         {
             questionText.text = "Acertou!";
             buttonImage = answerButtons[index].GetComponent<Image>();
             buttonImage.sprite = correctAnswerSprite;
+            accuracyKeeper.IncrementCorrectAnswers();
         }
         else
         {
-            string correctAnswer = question.GetAnswer(question.GetCorrectAnswerIndex());
+            string correctAnswer = currentQuestion.GetAnswer(currentQuestion.GetCorrectAnswerIndex());
             questionText.text = "A resposta certa era: \n" + correctAnswer;
-            buttonImage = answerButtons[question.GetCorrectAnswerIndex()].GetComponent<Image>();
+            buttonImage = answerButtons[currentQuestion.GetCorrectAnswerIndex()].GetComponent<Image>();
             buttonImage.sprite = correctAnswerSprite;
         } 
-
-        SetButtonState(false);
     }
 
     void GetNextQuestion()
     {
-        SetButtonState(true);
-        SetDefaultButtonSprites();
-        DisplayQuestion();
+        
+        
+        if(questions.Count > 0)
+        {
+            SetButtonState(true);
+            SetDefaultButtonSprites();
+            GetRandomQuestion();
+            DisplayQuestion();
+            accuracyKeeper.IncrementQuestionsSeen();
+        }
+        
+        
+    }
+
+    void GetRandomQuestion()
+    {
+        int index = Random.Range(0, questions.Count);
+        currentQuestion = questions[index];
+
+        if(questions.Contains(currentQuestion))
+        {
+        questions.Remove(currentQuestion);
+        }        
     }
 
     void DisplayQuestion()
     {
-        questionText.text = question.GetQuestion();
+        questionText.text = currentQuestion.GetQuestion();
 
         
         for (int i = 0; i<answerButtons.Length; i++) 
         {
             TextMeshProUGUI buttonText = answerButtons[i].GetComponentInChildren<TextMeshProUGUI>();
-            buttonText.text = question.GetAnswer(i);
+            buttonText.text = currentQuestion.GetAnswer(i);
             
         }
     }
