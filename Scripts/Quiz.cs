@@ -14,7 +14,7 @@ public class Quiz : MonoBehaviour
     [Header("Answers")]
     [SerializeField] GameObject[] answerButtons;
     int correctAnswerIndex;
-    bool hasAnsweredEarly; 
+    bool hasAnsweredEarly = true; 
 
     [Header("Button Colors")]
     [SerializeField] Sprite defaultAnswerSprite;
@@ -26,13 +26,19 @@ public class Quiz : MonoBehaviour
 
     [Header("Accuracy")]
     [SerializeField] TextMeshProUGUI accuracyText;
-   
      AccuracyKeeper accuracyKeeper;
     
-    void Start()
+    [Header("ProgressBar")]
+    [SerializeField] Slider progressBar;
+
+    public bool isComplete;
+
+    void Awake() //awake é melhor para quando se usa FindObject do que Start, pois é inicializado antes do mesmo
     {
         timer = FindAnyObjectByType<Timer>();
         accuracyKeeper = FindAnyObjectByType<AccuracyKeeper>();
+        progressBar.maxValue = questions.Count;
+        progressBar.value = 0;
     }
 
     void Update()
@@ -40,6 +46,13 @@ public class Quiz : MonoBehaviour
         timerImage.fillAmount = timer.fillFraction;
         if(timer.loadNextQuestion)
         {
+
+            if (progressBar.value == progressBar.maxValue)
+            {
+                isComplete = true;
+                return;
+            }
+
             hasAnsweredEarly = false;
             GetNextQuestion();
             timer.loadNextQuestion = false;
@@ -90,6 +103,7 @@ public class Quiz : MonoBehaviour
             SetDefaultButtonSprites();
             GetRandomQuestion();
             DisplayQuestion();
+            progressBar.value++;
             accuracyKeeper.IncrementQuestionsSeen();
         }
         
